@@ -1,0 +1,150 @@
+---
+title: "Toronto Police's Approved Budget in 2021 by Communities & Neighbourhoods Command "
+author: "Shengyi Dai"
+date: "06 Frbruary 2022"
+output: pdf_document
+abstract: "Toronto Police Budget is data found on Toronto's open data website. This can be analyzed the approved budget for the police on everything, which can tell people where the taxpayer money goes, and the amount of money for each element's cost since the police's budget is a big expenditure from the tax."
+bibliography: ref_list.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(opendatatoronto)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+ 
+# get package
+package <- show_package("668434ee-9541-40a8-adb6-0ad805fcc9b6")
+package
+ 
+# get all resources for this package
+resources <- list_package_resources("668434ee-9541-40a8-adb6-0ad805fcc9b6")
+ 
+# identify datastore resources; by default, Toronto Open Data sets datastore resource format to CSV for non-geospatial and GeoJSON for geospatial resources
+datastore_resources <- filter(resources, tolower(format) %in% c('csv', 'geojson'))
+ 
+# load the first datastore resource as a sample
+data <- filter(datastore_resources, row_number()==1) %>% get_resource()
+
+
+```
+
+# 1 Introduction
+A lot of the money from the taxpayers goes to funding the police station. The city of Toronto spends 25% of the taxpayer's money to fund the police station, which is about 1.13 billion dollars, and Toronto spends about 3.1 million dollars a day on police services [@h]. That is a lot of money, and there is a dataset on Toronto's open data website which shows the budget to the police station in each category. \
+
+Even though there may be people who think that there is so much money spent on funding police stations, I think they deserve it. The polices are the ones that take the risks to protect the city and people here. They will always be there if there are emergencies, and there will try their best to protect you. It is the same with other people that are working for the emergency services. \
+
+It is interesting to find out what causes the most money for the budget of the policies, and see where our tax goes, it feels like giving support to the policies in their back, and shows the appreciation to the policies. \
+
+This time, the major thing will be looking at it the budget for the police in 2021, and the organization will be Toronto police station and for communities and neighborhood command. The next part will explain the dataset, which includes where to find the data and the R packages that will be used for analyzing the data, the methodology and data collection, and data characteristics. 
+
+
+
+
+# 2 Data
+
+## 2.1 Data Source
+
+This dataset includes a line-by-line breakdown of the Toronto Police Station (TPS) approved budget and services [@f]. The budget for TPS is used for things like equipment for policies, services, benefits, etc... In this report, the R package named opendatatoronto [@b] will be used. The last update of this dataset is on October 2021. Then the package tidyverse [@a] will be used for cleaning the data. Also, the package ggplot2 [@c] will be used when drawing the graphs which can make the analysis more visual. The package named dplyr [@d] will be used for manipulating the data. Then, knitr will be used for making tables with kableExtra [@e] package.
+
+## 2.2 Methodology and Data Collection
+
+This dataset contains the budget for the Toronto Police station from 2020 to 2021. There are 2755 observations and 12 variables. The variable contains id, fiscal year, budget type, organization entity, command name, pillar name, district name, unit name, feature category, cost element, cost element long name, amount. There are so many variables and this time is only going to focus on the approved budget that is in 2021 with the Toronto police station as the organization and communities and neighborhood command. \
+
+Even though this is the data from all the budget to Toronto police station in 2021, it may not be that accurate, since this is the open data, and this is only the budget, not what the actual spend, so this is only an idea of how much fund is to the police station each year, not the accurate amount money that the police station spend. According to the defundthepolice.org website, there are 1.13 billion dollars in taxpayer dollars on funding the police in Toronto [@h]. This is much less than the amount of money that is recorded in this dataset. Also, this is just the funding the government gives to the Toronto police station, it does not mean that they need this much money for these categories.
+
+
+## 2.3 Data Characteristics
+
+ 
+Since the dataset contains all of the information of the Toronto Police Station's budget from 2020 and 2021, there is so much extra information that is not needed. In order to make the dataset focus on the topic that is going to be analyzed, cleaning the dataset is an important thing to do. Firstly, filter the year of the data on 2021 since the year for analyzing is 2021. Then, focus the data that is only from the Toronto Police Service since there are also other organization entities such as the TPS board and parking enforcement unit. Then filter the command that is for communities and neighborhoods since this is the command that will be focused on in the analysis. Since this time is only looking at the budget that is approved, hence choose the approved budget that is in the data. Then filter out the amount that is less or equal to 0 because the budget that is looking at is positive. Finally, select the columns named "id", "Fiscal Year", "Budget Type","Organization Entity", "Command Name", "Feature Category", "Amount" which are all the data needed. \
+In the table below is the meaning of the data selected, the data description can be found on the website of Toronto Police Station [@g]:
+
+|    Variable Name  |                           Description                           |
+|-------------------|-----------------------------------------------------------------|
+|       id          |The id of each approved budget                                   |
+|     Fiscal Year   | The year of the budget are prepared and financial records   |
+|  Budget Type      | The budget statue, approved or request                          |
+|Organization Entity|The organization for which the budget is submitted.          |
+|  Command Name     | The command of the approved budget                              |
+|  Feature Category |The group of cost elements of the same type.                     |
+| Amount            |Funding for specific budget line items.                          |
+$$
+\begin{aligned}
+Table\ 1.\ Data \ description
+\end{aligned}
+$$
+
+```{r, echo=FALSE}
+budget_data <- data%>%
+  filter(Fiscal_Year == "2021",
+         Organization_Entity == "1 - Toronto Police Service",
+         Command_Name == "Communities & Neighbourhoods Command",
+         Budget_Type == "Approved Budget")%>%
+  filter(Amount > 0)%>%
+  select("_id", "Fiscal_Year", "Budget_Type","Organization_Entity", "Command_Name", "Feature_Category", "Amount")
+  
+head(budget_data)
+```
+$$
+\begin{aligned}
+Figure\ 1.\ Glimpse \ of\ the \ data
+\end{aligned}
+$$
+Figure 1 shows below, it gives an idea of what the data looks like after the cleaning steps. There are 453 observations with 7 variables which were described in table 1. It also shows the type of the variables in figure 1, only the id and amount are integers, others are strings.
+
+### 2.3.1 The Amount of Budget and Feature Category 
+```{r, echo=FALSE}
+summary_table <- budget_data %>% 
+  summarise(
+    min = min(Amount),
+    Q1 = quantile(Amount,0.25),
+    median = median(Amount),
+    Q3 = quantile(Amount,0.75),
+    max = max(Amount),
+    IQR = Q3 - Q1,
+    mean = mean(Amount),
+    sd = sd(Amount),
+    Small_Outliers = sum(Amount < Q1 - 1.5*IQR),
+    Large_Outliers = sum(Amount > Q3 + 1.5*IQR))
+knitr::kable(summary_table, caption = "Summary table of budget amount")
+```
+
+
+According to table 2, the maximum amount of budget is 33167600 dollars, and the minimum is 100 dollars. The mean of the budget is 617002.02, the median is 3000. This shows that even there is a lot of really large amount of money, there is half of the money is under 3000. According to the dataset, it seems there is less budget money for the services, materials and supplies. 
+
+
+```{r, echo=FALSE, witdth=10}
+budget_data %>% 
+  ggplot(aes(x= Feature_Category, y= Amount))+ geom_point() + theme_classic()+labs(x = "Feature Category", y = "Amount", title = "Amount of Each Feature Category")
+```
+$$
+\begin{aligned}
+Graph\ 1.\ Amount\ of\ Budget\ for\ Each\ Feature\ Category
+\end{aligned}
+$$
+In graph 1, the number on the y-axis was shown in scientific notation since the number is too big, 1e+07 is equal to 10000000, 2e+07 stands for 20000000, and 3e+07 is 30000000. According to the graph, most of the amount of the budget is under 10000000, but there is some budget for salaries that is above 20000000 and even it is more than 30000000. The government spends a lot of money on salaries, and the second top of the budget is the benefits, which seems like the highest budget amount for benefits is about 4000000. 
+
+```{r, echo=FALSE}
+budget_data %>% 
+  ggplot(aes(x= Feature_Category))+ geom_bar(fill = "grey", color = "black") + theme_classic()+labs(x = "Feature Category", y = "Count", title = "Count of Each Feature Category")
+```
+
+
+$$
+\begin{aligned}
+Graph\ 2.\ Count\ of\ each\ feature\ category
+\end{aligned}
+$$
+Shown in graph 2 is the count of the feature category, which means how many of the budget goes to each category. It shows that the equipment had the lowest count, and services have the highest count. It is interesting that in the dataset, the services get a really low amount of budget and salaries are actually the highest amount of budget, but it is the salary is the second-highest count and the highest count is the services. The other low budget amount category is the equipment, materials, and supplies, and premium payments are also the lowest three count here. I think this shows that the policies need a lot of services, but the services cost low or the government only give them this low amount of budget for services.
+
+
+
+
+\pagebreak
+
+# 3 Reference

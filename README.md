@@ -1,1 +1,5 @@
-# STA304-paper1
+# starter_folder
+
+This repo....
+
+It is organised as follows...
